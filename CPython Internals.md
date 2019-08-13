@@ -9,4 +9,3 @@
 c = compile('test.py', 'test.py', 'exec')
 ```
 
-111
