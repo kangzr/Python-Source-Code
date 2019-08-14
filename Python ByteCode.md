@@ -1,5 +1,13 @@
 #### Python 字节码
 
+```mermaid
+graph LR
+A[test.py]--compile-->B[Bytecode]
+B--interpreter-->C[output]
+```
+
+
+
 STORE_FAST/LOAD_FAST: 存储/读取PyFrameObject的f_localsplus
 
 STORE_NAME/LOAD_NAME: 存储/读取(以此搜索local，global，builtin)local命名空间
