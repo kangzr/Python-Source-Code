@@ -1,3 +1,17 @@
+### PyObject
+
+Everything is Object
+
+```
+[object.h]
+//python 对象机制的核心基石
+typedef struct _object{
+	PyObject_HEAD
+}PyObject;
+```
+
+
+
 ### PyIntObject
 
 
