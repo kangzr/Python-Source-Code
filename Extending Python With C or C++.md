@@ -53,3 +53,48 @@ gcc -I/usr/include/python2.7 -lpython2.7 -g fPIC -c spam.c -o spam.o \
 
 
 **Py_BulidValue**: 将C变量构建为Python的PyObject* **PyArg_ParseTuple**反之
+
+
+
+
+
+
+
+CPython
+
+```python
+# opcode.h
+# create code object
+c = compile('test.py', 'test.py', 'exec')
+```
+
+
+
+
+
+**import任何模块都会加入到`sys.modules` dict中**
+
+globals() 和 locals()返回全局和局部命名空间里的名字(函数内部使用，这返回函数内的相关名字)，return type是dict.
+
+python内部reload机制只会更新或添加符号，不会删除符号
+
+
+
+
+
+#### Python字节码
+
+```mermaid
+graph LR
+A[test.py]--compile-->B[Bytecode]
+B--interpreter-->C[output]
+```
+
+STORE_FAST/LOAD_FAST: 存储/读取PyFrameObject的f_localsplus
+
+STORE_NAME/LOAD_NAME: 存储/读取(以此搜索local，global，builtin)local命名空间
+
+模块的栈帧对象中的`f_locals` 和`f_globals` 值一样，都是`sys.modules['__main__'].__dict__` , 因此python
+
+中函数定义顺序无关，函数声明和实现其实是分离的，声明的字节码指令在模块的PyCodeObject中执行，而实现的字节码指令则是在函数自己的PyCodeObject中
+
