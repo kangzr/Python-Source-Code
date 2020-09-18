@@ -1,6 +1,8 @@
 ### Python中的Dict对象
 
-C++ STL map基于RB-tree (**O(logN)**)； Python PyDictObejct 对搜索效率要求极其苛刻，因此采用散列表(hash table) **O(1)**.
+C++ STL map基于RB-tree (搜索时间复杂度**O(logN)**)； 红黑树为平衡二叉树
+
+Python PyDictObejct 对搜索效率要求极其苛刻，因此采用散列表(hash table) 搜索时间复杂度**O(1)**.
 
 #### 5.1 散列表概述
 

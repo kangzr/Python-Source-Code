@@ -1,6 +1,8 @@
 ### 2.1 初识`PyIntObject`对象
 
-为**mutable对象**，的 一旦创建一个`PyIntObject`，就不能改变该对象的值。
+定长对象与变长对象。可变对象(mutable)和不可变对象(immutable)
+
+为**immutable对象**，的 一旦创建一个`PyIntObject`，就不能改变该对象的值。
 
 **如何针对整数对象设计一个高效机制？**
 
@@ -54,10 +56,6 @@ static int int_compare(PyIntObject *v, PyIntObject *w){
    
 */
 ```
-
-
-
-
 
 ### 2.2 `PyIntObject对象的创建和维护`
 
@@ -113,11 +111,59 @@ typedef struct _intblock PyIntBlock;
 typedef PyIntBlock *block_list = NULL;  // 维护整个整数对象的通用对象池
 typedef PyIntObject *free_list = NULL;
 
+/*
+ * 当freelist为NULL时，需要申请一个_intblock,然后接入block_list中，
+ * 因此block_list为一个单列表，每个节点为一个_intblock, 
+ * 每一个_intblock可以存储N_INTOBJECTS个PyIntObject
+ */
+static PyIntObject *
+fill_free_list(void){
+    PyInObject *p, *q;
+    p = (PyIntObject *) PyMem_MALLOC(sizeof(PyIntBlock));
+    if (p == NULL)
+        return (PyIntObject *) PyErr_NoMemory();
+    ((PyIntBlock *)p)->next = block_list;
+    block_list = (PyIntBlock*) p;
+    p = &((PyIntBlock *)p)->objects[0];
+    q = p + N_INTOBJECTS;
+    while (--q)
+        Py_TYPE(q) = (struct _typeobject *)(q-1);  //通过ob_type连接成单向链表
+    Py_TYPE(q) = NULL;
+    return p + N_INTOBJECTS - 1;
+}
 ```
 
 #### 2.2.4 添加和删除
 
 `PyInt_FromLong` 步骤
+
+```c
+PyObject *
+PyInt_FromLong(long ival)
+{
+    register PyIntObject *v;
+#if NSMALLNEGINTS + NSMALLPOSINTS > 0
+    // 尝试用小整数
+    if (-NSMALLNEGINTS <= ival && ival < NSMALLPOSINTS) {
+        v = small_ints[ival + NSMALLNEGINTS];
+        Py_INTREF(v);  // ob_refcnt++
+        // 省去COUNT_ALLOCS
+        return (PyObject *)v;
+    }
+    // 通用整数池申请新的内存空间
+    if (free_list == NULL) {
+        if ((free_list = fill_free_list()) == NULL)
+            return NULL;
+    }
+    v = free_list; // 取free_list中objects第一个PyIntObject
+    free_list = (PyIntObject *)Py_TYPE(v); // free_list 指向下一个元素
+    (void)PyObject_INIT(v, &PyInt_Type); // 将v 的类型ob_type设置为PyInt_Type。。。之前是当作指针来用
+    v->ob_ival = ival;  // 设置v的值
+    return (PyObject *)v;
+}
+```
+
+
 
 - 如果小整数对象池机制被激活，则尝试使用小整数对象池(`small_ints`)
 - 如果不能使用小整数对象池，则使用通用整数对象池(`fill_free_list`)
@@ -143,9 +189,13 @@ static PyIntObject* fill_free_list(void){
 
 ##### 2.2.4.3 使用通用整数对象池
 
- 不同`PyIntBlock`对象的objects中的空闲内存块是被链接在一起形成一个单向链表的，表头指针为`free_list`; 防止内存泄漏
+ 若P1满，P2未满。free_list指向P2, 现在P1删除一个元素，P1便有空闲内存，因此下次创建新元素时，应当使用P1，而不是P2，如果实现？
+
+不同`PyIntBlock`对象的objects中的空闲内存块是被链接在一起形成一个单向链表的，表头指针为`free_list`; 防止内存泄漏
 
 **如何连接不同PyInBlock的空闲内存？**
+
+也是通过int_dealloc实现。Block1满，Block2未满，Block1中删除元素，然后free_list将指向Block1中空闲位置。
 
 ```c
 [intobject.c]
@@ -161,6 +211,8 @@ static void int_dealloc(PyIntObject *v){
 ```
 
 #### 2.2.5 小整数对象池的初始化
+
+small_ints初始化。
 
 ```c
 [intobject.c]
@@ -181,6 +233,8 @@ int _PyInt_Init(void){
 	return 1;
 }
 ```
+
+### 2.3 Hack PyIntObject
 
 
 
