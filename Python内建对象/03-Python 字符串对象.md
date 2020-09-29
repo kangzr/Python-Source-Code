@@ -44,6 +44,7 @@ static long string_hash(PyStringObject *a){
 
 ```c
 [stringobject.c]
+//注意这里的str并不是我们字符串，而是其变量。比如a="python", str就是a
 PyObject* PyString_FromString(const char *str){
 	register size_t sizes;
     register PyStringObject *op;
